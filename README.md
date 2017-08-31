@@ -113,7 +113,28 @@ master stdout:  1  0 438768 117136   5840  37368    0    0     0   136  811 1926
 Sending kill to master 6dad5cb9-57f7-46e0-bad7-07ab117369a5
 ```
 
+### mco shell run -f test.sh
+Copy local script to remote host, and run.
+```
+[root@localhost:/root]
+# cat test.sh
+#!/usr/bin/bash
 
+
+echo $1
+
+[root@localhost:/root]
+# mco shell run -f /root/test.sh test
+
+ * [ ============================================================> ] 1 / 1
+
+localhost:
+test
+
+
+Finished processing 1 / 1 hosts in 2224.94 ms
+
+```
 ### mco shell start
 
 Starts a command in the background and tells you the id that has been assigned
