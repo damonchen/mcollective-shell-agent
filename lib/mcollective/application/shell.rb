@@ -18,9 +18,13 @@ END_OF_USAGE
          :description => 'Switch run to tail mode',
          :type        => :bool
 
+  option :file,
+         :arguments => ['--file PATH'],
+         :description => 'run script file remotely'
+
   def post_option_parser(configuration)
     if ARGV.size < 1
-      raise "Please specify an action"
+      raise "Please specify an action or script file"
     end
 
     valid_actions = ['run', 'start', 'watch', 'list', 'kill' ]
@@ -120,23 +124,33 @@ END_OF_USAGE
   def do_run(command)
     client = rpcclient('shell')
 
-    responses = client.run(:command => command)
+    if configuration[:file].nil?
+      responses = client.run({:type => 'cmd', :command => command})
+    else
+      filepath = configuration[:file]
+      filename = filepath.split('/')[-1]
+      responses = client.run({:type => 'script', :command => "script:#{filepath}", :filename => filename, :content => Base64.encode64(File.readlines(filepath).join), :base64 => true, :args => command})
+    end
     responses.sort_by! { |r| r[:sender] }
 
-    responses.each do |response|
-      if response[:statuscode] == 0
-        puts "#{response[:sender]}:"
-        puts response[:data][:stdout]
-        if response[:data][:stderr].size > 0
-          puts "    STDERR:"
-          puts response[:data][:stderr]
+    if client.options[:output_format] == :json
+      puts responses.map { |resp| resp.results }.to_json
+    else
+      responses.each do |response|
+        if response[:statuscode] == 0
+          puts "#{response[:sender]}:"
+          puts response[:data][:stdout]
+          if response[:data][:stderr].size > 0
+            puts "    STDERR:"
+            puts response[:data][:stderr]
+          end
+          if response[:data][:exitcode] != 0
+            puts "exitcode: #{response[:data][:exitcode]}"
+          end
+          puts ""
+        else
+          puts "#{response[:sender]}: ERROR: #{response.inspect}"
         end
-        if response[:data][:exitcode] != 0
-          puts "exitcode: #{response[:data][:exitcode]}"
-        end
-        puts ""
-      else
-        puts "#{response[:sender]}: ERROR: #{response.inspect}"
       end
     end
 

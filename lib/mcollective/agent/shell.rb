@@ -40,7 +40,15 @@ module MCollective
 
       def run_command(request = {})
         process = Job.new
-        process.start_command(request[:command])
+
+        if request[:type] == 'cmd' or request[:type].nil?
+          process.start_command(request[:command])
+        elsif request[:type] == 'script'
+          script_path = gen_tmpfile(request)
+          script_path = "su - #{request[:user]} -c '" + script_path + " " + request[:params].to_s + "'" if !windows? and request[:user]
+          process.start_command(script_path + " " + request[:params].to_s)
+          end
+        end
         timeout = request[:timeout] || 0
         reply[:success] = true
         begin
@@ -60,7 +68,14 @@ module MCollective
 
       def start_command(request = {})
         job = Job.new
-        job.start_command(request[:command])
+        if request[:type] == 'cmd'
+          job.start_command(request[:command])
+        elsif request[:type] == 'script'
+          script_path = gen_tmpfile(request)
+          script_path = "su - #{request[:user]} -c '" + script_path + " " + request[:params].to_s + "'" if !windows? and request[:user]
+          job.start_command(script_path + " " + request[:params].to_s)
+        end
+
         reply[:handle] = job.handle
       end
 
@@ -77,6 +92,35 @@ module MCollective
 
         reply[:jobs] = list
       end
+    end
+
+    def gen_tmpfile(request)
+      require 'tempfile'
+      tmpfile = Tempfile.new(request[:filename])
+      if request[:base64] == true
+        content = Base64.decode64(request[:content])
+      else
+        content = request[:content]
+      end
+      content = content.encode('gbk') if windows?
+      tmpfile.write(content)
+      tmpfile.chmod(0755)
+      tmpfile.close
+      if windows?
+        if request[:filename].match(/\./)
+          script_path = (tmpfile.path + "." + request[:filename].split(/\./)[-1]).encode('gbk')
+          File.rename tmpfile.path,script_path
+        else
+          script_path = tmpfile.path
+        end
+        script_path
+      else
+        tmpfile.path
+      end
+    end
+
+    def windows?
+      RUBY_PLATFORM.match(/cygwin|mswin|mingw|bccwin|wince|emx|win32|dos/)
     end
   end
 end
