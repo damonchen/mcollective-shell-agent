@@ -127,9 +127,9 @@ END_OF_USAGE
     if configuration[:file].nil?
       responses = client.run({:type => 'cmd', :command => command})
     else
-      filepath = configuration[:file]
+      filepath,args = configuration[:file].split(" ",2)
       filename = filepath.split('/')[-1]
-      responses = client.run({:type => 'script', :command => "script:#{filepath}", :filename => filename, :content => Base64.encode64(File.readlines(filepath).join), :base64 => true, :args => command})
+      responses = client.run({:type => 'script', :command => "script:#{filepath}", :filename => filename, :content => Base64.encode64(File.readlines(filepath).join), :base64 => true, :args => args + " " + command})
     end
     responses.sort_by! { |r| r[:sender] }
 
