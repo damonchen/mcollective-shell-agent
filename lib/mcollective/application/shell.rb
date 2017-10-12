@@ -130,12 +130,12 @@ END_OF_USAGE
     user = configuration[:user] || 'root'
 
     if configuration[:file].nil?
-      responses = client.run({:type => 'cmd', :command => command})
+      responses = client.run({:type => 'cmd', :user => user, :command => command})
     else
       filepath,args = configuration[:file].split(" ",2)
       args ||= ''
       filename = filepath.split('/')[-1]
-      responses = client.run({:type => 'script', :command => "script:#{filepath}", :filename => filename, :content => Base64.encode64(File.readlines(filepath).join), :base64 => true, :args => args + " " + command})
+      responses = client.run({:type => 'script', :user => user, :command => "script:#{filepath}", :filename => filename, :content => Base64.encode64(File.readlines(filepath).join), :base64 => true, :args => args + " " + command})
     end
     responses.sort_by! { |r| r[:sender] }
 
