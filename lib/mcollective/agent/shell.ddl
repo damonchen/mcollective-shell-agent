@@ -4,7 +4,7 @@ metadata    :name        => "shell",
             :license     => "ASL 2.0",
             :version     => "0.0.2",
             :url         => "https://github.com/puppetlabs/mcollective-shell-agent",
-            :timeout     => 180
+            :timeout     => 3600
 
 action "run", :description => "Run a command" do
     display :always

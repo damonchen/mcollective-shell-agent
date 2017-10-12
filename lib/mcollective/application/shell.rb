@@ -22,6 +22,10 @@ END_OF_USAGE
          :arguments => ['--file PATH'],
          :description => 'run script file remotely'
 
+  option :user,
+         :arguments => ['--user USER'],
+         :description => 'runas user'
+
   def post_option_parser(configuration)
     if ARGV.size < 1
       raise "Please specify an action or script file"
@@ -123,11 +127,13 @@ END_OF_USAGE
 
   def do_run(command)
     client = rpcclient('shell')
+    user = configuration[:user] || 'root'
 
     if configuration[:file].nil?
       responses = client.run({:type => 'cmd', :command => command})
     else
       filepath,args = configuration[:file].split(" ",2)
+      args ||= ''
       filename = filepath.split('/')[-1]
       responses = client.run({:type => 'script', :command => "script:#{filepath}", :filename => filename, :content => Base64.encode64(File.readlines(filepath).join), :base64 => true, :args => args + " " + command})
     end
