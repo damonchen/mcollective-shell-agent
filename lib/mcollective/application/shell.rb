@@ -135,7 +135,7 @@ END_OF_USAGE
       filepath,args = configuration[:file].split(" ",2)
       args ||= ''
       filename = filepath.split('/')[-1]
-      responses = client.run({:type => 'script', :user => user, :command => "script:#{filepath}", :filename => filename, :content => Base64.encode64(File.readlines(filepath).join), :base64 => true, :args => args + " " + command})
+      responses = client.run({:type => 'script', :user => user, :command => "script:#{filepath}", :filename => filename, :content => Base64.encode64(File.readlines(filepath).join), :base64 => true, :params => args + " " + command})
     end
     responses.sort_by! { |r| r[:sender] }
 
