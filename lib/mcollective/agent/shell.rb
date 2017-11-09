@@ -52,7 +52,7 @@ module MCollective
           process.kill
         end
 
-        reply[:stdout] = process.stdout
+        reply[:stdout] = process.stdout.force_encoding(Encoding.default_external).encode("utf-8")
         reply[:stderr] = process.stderr
         reply[:exitcode] = process.exitcode
         process.cleanup_state
