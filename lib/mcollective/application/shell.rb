@@ -140,7 +140,12 @@ END_OF_USAGE
     responses.sort_by! { |r| r[:sender] }
 
     if client.options[:output_format] == :json
-      puts responses.map { |resp| resp.results }.to_json
+      puts responses.map { |resp|
+        data = resp.results[:data]
+        data[:stdout] = data[:stdout].force_encoding(Encoding.default_external).encode('utf-8') if data[:stdout]
+        data[:stderr] = data[:stderr].force_encoding(Encoding.default_external).encode('utf-8') if data[:stderr]
+        resp.results[:data] = data
+      }.to_json
     else
       responses.each do |response|
         if response[:statuscode] == 0
