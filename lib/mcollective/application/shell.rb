@@ -145,6 +145,7 @@ END_OF_USAGE
         data[:stdout] = data[:stdout].force_encoding(Encoding.default_external).encode('utf-8') if data[:stdout]
         data[:stderr] = data[:stderr].force_encoding(Encoding.default_external).encode('utf-8') if data[:stderr]
         resp.results[:data] = data
+        resp.results
       }.to_json
     else
       responses.each do |response|
