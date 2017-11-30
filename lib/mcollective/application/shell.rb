@@ -26,6 +26,10 @@ END_OF_USAGE
          :arguments => ['--user USER'],
          :description => 'runas user'
 
+  option :env,
+         :arguments => ['--env ENVIRONMENT'],
+         :description => 'environment'
+
   def post_option_parser(configuration)
     if ARGV.size < 1
       raise "Please specify an action or script file"
@@ -128,25 +132,28 @@ END_OF_USAGE
   def do_run(command)
     client = rpcclient('shell')
     user = configuration[:user] || 'root'
+    env = configuration[:env] || 'env'
 
     if configuration[:file].nil?
-      responses = client.run({:type => 'cmd', :user => user, :command => command})
+      responses = client.run({:type => 'cmd', :user => user, :command => command, :env => env})
     else
       filepath,args = configuration[:file].split(" ",2)
       args ||= ''
       filename = filepath.split('/')[-1]
-      responses = client.run({:type => 'script', :user => user, :command => "script:#{filepath}", :filename => filename, :content => Base64.encode64(File.readlines(filepath).join), :base64 => true, :params => args + " " + command})
+      responses = client.run({:type => 'script', :user => user, :command => "script:#{filepath}", 
+        :filename => filename, :content => Base64.encode64(File.readlines(filepath).join),
+        :base64 => true, :params => args + " " + command, :env => env })
     end
     responses.sort_by! { |r| r[:sender] }
 
     if client.options[:output_format] == :json
-      puts responses.map { |resp|
+      responses.each { |resp|
         data = resp.results[:data]
         data[:stdout] = data[:stdout].force_encoding(Encoding.default_external).encode('utf-8') if data[:stdout]
-        data[:stderr] = data[:stderr].force_encoding(Encoding.default_external).encode('utf-8') if data[:stderr]
-        resp.results[:data] = data
-        resp.results
-      }.to_json
+        data[:stderr] = data[:stderr].force_encoding(Encoding.default_external).encode('utf-8') if data[:stderr]resp.results[:data] = data
+      }
+
+      puts responses.to_json
     else
       responses.each do |response|
         if response[:statuscode] == 0
