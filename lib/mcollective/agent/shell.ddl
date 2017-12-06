@@ -25,6 +25,14 @@ action "run", :description => "Run a command" do
             :maxlength   => 1024,
             :optional    => true
 
+    input   :env,
+            :prompt      => "Environment",
+            :description => "Environment to run command as",
+            :type        => :string,
+            :validation  => '.*',
+            :maxlength   => 100*1024,
+            :optional    => true
+
     input   :timeout,
             :prompt      => "Timeout",
             :description => "Timeout to wait for the command to complete",
@@ -66,6 +74,14 @@ action "start", :description => "Spawn a command" do
             :type        => :string,
             :validation  => '.*',
             :maxlength   => 1024,
+            :optional    => true
+            
+    input   :env,
+            :prompt      => "Environment",
+            :description => "Environment to run command as",
+            :type        => :string,
+            :validation  => '.*',
+            :maxlength   => 100*1024,
             :optional    => true
 
     output  :handle,

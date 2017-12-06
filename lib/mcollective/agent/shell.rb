@@ -103,17 +103,31 @@ module MCollective
         end
       end
 
-      def gen_command(request = {})
-        if request[:type] == 'cmd'
-          cmd = request[:command]
-        else
-          cmd = gen_tmpfile(request) + ' ' + request[:params].to_s
-        end
-        if !windows? and request[:user]
-          cmd = "su - #{request[:user]} -c '" + cmd + "'"
-        end
-        cmd
+    def gen_env(request = {})
+      env = request[:env] || ''
+
+      value = ''
+      if env 
+        env = JSON.parse(env)
+        value = env.map{|k,v| "#{k}=\"#{v}\""}.join(';')
+        value += ";"
       end
+      value
+     end
+
+    def gen_command(request = {})
+      if request[:type] == 'cmd'
+        cmd = request[:command]
+      else
+        cmd = gen_tmpfile(request) + ' ' + request[:params].to_s 
+      end
+      
+      value = gen_env(request)
+      if !windows? and request[:user]
+          cmd = "su - #{request[:user]} -c '#{value}" + cmd + "'"
+      end
+      cmd
+    end
 
       def windows?
         RUBY_PLATFORM.match(/cygwin|mswin|mingw|bccwin|wince|emx|win32|dos/)
