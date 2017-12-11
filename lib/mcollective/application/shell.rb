@@ -26,8 +26,8 @@ END_OF_USAGE
          :arguments => ['--user USER'],
          :description => 'runas user'
 
-  option :env,
-         :arguments => ['--env ENVIRONMENT'],
+  option :environment,
+         :arguments => ['--environment ENVIRONMENT'],
          :description => 'environment'
 
   def post_option_parser(configuration)
@@ -132,17 +132,17 @@ END_OF_USAGE
   def do_run(command)
     client = rpcclient('shell')
     user = configuration[:user] || 'root'
-    env = configuration[:env] || 'env'
+    environment = configuration[:environment] || ''
 
     if configuration[:file].nil?
-      responses = client.run({:type => 'cmd', :user => user, :command => command, :env => env})
+      responses = client.run({:type => 'cmd', :user => user, :command => command, :environment => environment})
     else
       filepath,args = configuration[:file].split(" ",2)
       args ||= ''
       filename = filepath.split('/')[-1]
-      responses = client.run({:type => 'script', :user => user, :command => "script:#{filepath}", 
+      responses = client.run({:type => 'script', :user => user, :command => "script:#{filepath}",
         :filename => filename, :content => Base64.encode64(File.readlines(filepath).join),
-        :base64 => true, :params => args + " " + command, :env => env })
+        :base64 => true, :params => args + " " + command, :environment => environment })
     end
     responses.sort_by! { |r| r[:sender] }
 
@@ -150,7 +150,8 @@ END_OF_USAGE
       responses.each { |resp|
         data = resp.results[:data]
         data[:stdout] = data[:stdout].force_encoding(Encoding.default_external).encode('utf-8') if data[:stdout]
-        data[:stderr] = data[:stderr].force_encoding(Encoding.default_external).encode('utf-8') if data[:stderr]resp.results[:data] = data
+        data[:stderr] = data[:stderr].force_encoding(Encoding.default_external).encode('utf-8') if data[:stderr]
+        resp.results[:data] = data
       }
 
       puts responses.to_json

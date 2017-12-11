@@ -103,31 +103,43 @@ module MCollective
         end
       end
 
-    def gen_env(request = {})
-      env = request[:env] || ''
 
-      value = ''
-      if env 
-        env = JSON.parse(env)
-        value = env.map{|k,v| "#{k}=\"#{v}\""}.join(';')
-        value += ";"
-      end
-      value
-     end
+	  def gen_environment(request = {})
+		environment = request[:environment] || ''
 
-    def gen_command(request = {})
-      if request[:type] == 'cmd'
-        cmd = request[:command]
-      else
-        cmd = gen_tmpfile(request) + ' ' + request[:params].to_s 
+		if windows?
+			export = 'set'
+			join = '\r\n'
+		else
+			export = 'export'
+			join = ';'
+		end
+
+		value = ''
+		if !environment.empty?
+			environment = JSON.parse(environment)
+			value = environment.map{|k,v| "#{export} #{k}=\'#{v}'"}.join(join)
+			value += join
+		end
+		value
+	  end
+
+      def gen_command(request = {})
+        if request[:type] == 'cmd'
+          cmd = request[:command]
+        else
+          cmd = gen_tmpfile(request) + ' ' + request[:params].to_s 
+		end
+
+		value = gen_environment(request)
+
+		cmd = " #{value} " + cmd
+
+        if !windows? and request[:user]
+          cmd = "su - #{request[:user]} -c '" + cmd + "'"
+        end
+        cmd
       end
-      
-      value = gen_env(request)
-      if !windows? and request[:user]
-          cmd = "su - #{request[:user]} -c '#{value}" + cmd + "'"
-      end
-      cmd
-    end
 
       def windows?
         RUBY_PLATFORM.match(/cygwin|mswin|mingw|bccwin|wince|emx|win32|dos/)
