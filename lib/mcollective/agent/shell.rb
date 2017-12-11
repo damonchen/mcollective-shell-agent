@@ -104,44 +104,56 @@ module MCollective
       end
 
 
-	  def gen_environment(request = {})
-		environment = request[:environment] || ''
+    def gen_environment(request = {})
+      environment = request[:environment] || ''
 
-		if windows?
-			export = 'set'
-			join = '\r\n'
-		else
-			export = 'export'
-			join = ';'
-		end
+      if windows?
+        export = 'set'
+        join = '\r\n'
+      else
+        export = 'export'
+        join = ';'
+      end
 
-		value = ''
-		if !environment.empty?
-			environment = JSON.parse(environment)
-			value = environment.map{|k,v| "#{export} #{k}=\'#{v}'"}.join(join)
-			value += join
-		end
-		value
-	  end
+      value = ''
+      if !environment.empty?
+        environment = JSON.parse(environment)
+        value = environment.map{|k,v| "#{export} #{k}=\'#{v}'"}.join(join)
+        value += join
+      end
+      value
+    end
 
-      def gen_command(request = {})
-        if request[:type] == 'cmd'
-          cmd = request[:command]
-        else
-          cmd = gen_tmpfile(request) + ' ' + request[:params].to_s 
-		end
+    def get_run_as(request):
+      run_as = request[:user]
+      environment = request[:environment]
+      if ! environment.empty?
+        environment = JSON.parse(environment)
+        run_as = environment['__RUN_AS__'].empty ? run_as : environment['__RUN_AS__']
+      end
 
-		value = gen_environment(request)
+      run_as
+    end
 
-		cmd = " #{value} " + cmd
+    def gen_command(request = {})
+      if request[:type] == 'cmd'
+        cmd = request[:command]
+      else
+        cmd = gen_tmpfile(request) + ' ' + request[:params].to_s
+      end
 
-        if !windows? and request[:user]
-          cmd = "su - #{request[:user]} -c '" + cmd + "'"
-        end
+      value = gen_environment(request)
+
+      cmd = " #{value} " + cmd
+      run_as = get_run_as(request)
+
+      if !windows? and run_as
+        cmd = "su - #{run_as} -c '" + cmd + "'"
+      end
         cmd
       end
 
-      def windows?
+    def windows?
         RUBY_PLATFORM.match(/cygwin|mswin|mingw|bccwin|wince|emx|win32|dos/)
       end
     end
