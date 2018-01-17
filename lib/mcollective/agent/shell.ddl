@@ -25,7 +25,7 @@ action "run", :description => "Run a command" do
             :maxlength   => 1024,
             :optional    => true
 
-    input   :env,
+    input   :environment,
             :prompt      => "Environment",
             :description => "Environment to run command as",
             :type        => :string,
@@ -76,7 +76,7 @@ action "start", :description => "Spawn a command" do
             :maxlength   => 1024,
             :optional    => true
             
-    input   :env,
+    input   :environment,
             :prompt      => "Environment",
             :description => "Environment to run command as",
             :type        => :string,
