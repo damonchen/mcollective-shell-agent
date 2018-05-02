@@ -14,9 +14,9 @@ mco shell [OPTIONS] [FILTERS] <ACTION> [ARGS]
 END_OF_USAGE
 
   option :tail,
-         :arguments   => [ '--tail' ],
+         :arguments => ['--tail'],
          :description => 'Switch run to tail mode',
-         :type        => :bool
+         :type => :bool
 
   option :file,
          :arguments => ['--file PATH'],
@@ -35,7 +35,7 @@ END_OF_USAGE
       raise "Please specify an action or script file"
     end
 
-    valid_actions = ['run', 'start', 'watch', 'list', 'kill' ]
+    valid_actions = ['run', 'start', 'watch', 'list', 'kill']
     action = ARGV.shift
 
     unless valid_actions.include?(action)
@@ -51,6 +51,22 @@ END_OF_USAGE
 
   private
 
+  def calc_args(command)
+    user = configuration[:user] || 'root'
+    env = configuration[:env] || 'env'
+    if configuration[:file].nil?
+      {:type => 'cmd', :user => user, :command => command, :env => env}
+    else
+      filepath, cmd_args = configuration[:file].split(" ", 2)
+      cmd_args ||= ''
+      filename = filepath.split('/')[-1]
+
+      {:type => 'script', :user => user, :command => "script:#{filepath}",
+       :filename => filename, :content => Base64.encode64(File.readlines(filepath).join),
+       :base64 => true, :params => cmd_args + " " + command, :env => env}
+    end
+  end
+
   def run_command
     command = ARGV.join(' ')
 
@@ -65,8 +81,8 @@ END_OF_USAGE
     command = ARGV.join(' ')
     client = rpcclient('shell')
 
-    responses = client.start(:command => command)
-    responses.sort_by! { |r| r[:sender] }
+    responses = client.start(calc_args(command))
+    responses.sort_by! {|r| r[:sender]}
 
     responses.each do |response|
       if response[:statuscode] == 0
@@ -82,7 +98,7 @@ END_OF_USAGE
     client = rpcclient('shell')
 
     responses = client.list
-    responses.sort_by! { |r| r[:sender] }
+    responses.sort_by! {|r| r[:sender]}
 
     responses.each do |response|
       if response[:statuscode] == 0
@@ -131,26 +147,15 @@ END_OF_USAGE
 
   def do_run(command)
     client = rpcclient('shell')
-    user = configuration[:user] || 'root'
-    env = configuration[:env] || 'env'
 
-    if configuration[:file].nil?
-      responses = client.run({:type => 'cmd', :user => user, :command => command, :env => env})
-    else
-      filepath,args = configuration[:file].split(" ",2)
-      args ||= ''
-      filename = filepath.split('/')[-1]
-      responses = client.run({:type => 'script', :user => user, :command => "script:#{filepath}", 
-        :filename => filename, :content => Base64.encode64(File.readlines(filepath).join),
-        :base64 => true, :params => args + " " + command, :env => env })
-    end
-    responses.sort_by! { |r| r[:sender] }
+    responses = client.run(calc_args(command))
+    responses.sort_by! {|r| r[:sender]}
 
     if client.options[:output_format] == :json
-      responses.each { |resp|
+      responses.each {|resp|
         data = resp.results[:data]
         data[:stdout] = data[:stdout].force_encoding(Encoding.default_external).encode('utf-8') if data[:stdout]
-        data[:stderr] = data[:stderr].force_encoding(Encoding.default_external).encode('utf-8') if data[:stderr]resp.results[:data] = data
+        data[:stderr] = data[:stderr].force_encoding(Encoding.default_external).encode('utf-8') if data[:stderr] resp.results[:data] = data
       }
 
       puts responses.to_json
@@ -180,7 +185,8 @@ END_OF_USAGE
     client = rpcclient('shell')
 
     processes = []
-    client.start(:command => command).each do |response|
+
+    client.start(calc_args(command)).each do |response|
       next unless response[:statuscode] == 0
       processes << Watcher.new(response[:sender], response[:data][:handle])
     end
@@ -223,10 +229,10 @@ END_OF_USAGE
         end
 
         client.status({
-          :handle => process.handle,
-          :stdout_offset => process.stdout_offset,
-          :stderr_offset => process.stderr_offset,
-        }).each do |response|
+                          :handle => process.handle,
+                          :stdout_offset => process.stdout_offset,
+                          :stderr_offset => process.stderr_offset,
+                      }).each do |response|
           if response[:statuscode] != 0
             process.flush
             processes.delete(process)
