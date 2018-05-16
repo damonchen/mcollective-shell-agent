@@ -107,7 +107,7 @@ module MCollective
       env = request[:env] || ''
 
       value = ''
-      if env 
+      if env != ''
         env = JSON.parse(env)
         value = env.map{|k,v| "#{k}=\"#{v}\""}.join(';')
         value += ";"

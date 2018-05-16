@@ -53,7 +53,7 @@ END_OF_USAGE
 
   def calc_args(command)
     user = configuration[:user] || 'root'
-    env = configuration[:env] || 'env'
+    env = configuration[:env] || ''
     if configuration[:file].nil?
       {:type => 'cmd', :user => user, :command => command, :env => env}
     else
@@ -155,7 +155,8 @@ END_OF_USAGE
       responses.each {|resp|
         data = resp.results[:data]
         data[:stdout] = data[:stdout].force_encoding(Encoding.default_external).encode('utf-8') if data[:stdout]
-        data[:stderr] = data[:stderr].force_encoding(Encoding.default_external).encode('utf-8') if data[:stderr] resp.results[:data] = data
+        data[:stderr] = data[:stderr].force_encoding(Encoding.default_external).encode('utf-8') if data[:stderr]
+        resp.results[:data] = data
       }
 
       puts responses.to_json
