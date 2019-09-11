@@ -90,7 +90,11 @@ module MCollective
           ::Process.detach(manager)
 
           if File.exists?("#{state_directory}/pid")
-            @pid = Integer(IO.read("#{state_directory}/pid"))
+            pid = ""
+            while pid == "" do
+              pid = IO.read("#{state_directory}/pid")
+            end
+            @pid = Integer(pid)
           else
             # we must have an error file
             raise IO.read("#{state_directory}/error")
@@ -196,6 +200,9 @@ module MCollective
 
         def wrapper
           return <<-WRAPPER
+            while !File.exists("#{state_directory}/command")
+              sleep 0.1
+            end
             command = IO.read("#{state_directory}/command").chomp
 
             options = {
