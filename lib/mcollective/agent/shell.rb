@@ -40,7 +40,8 @@ module MCollective
 
       def run_command(request = {})
         process = Job.new
-        process.start_command(gen_command(request))
+        environment = get_environment(request)
+        process.start_command(environment, gen_command(request))
         timeout = request[:timeout] || 0
         reply[:success] = true
         begin
@@ -52,15 +53,17 @@ module MCollective
           process.kill
         end
 
-        reply[:stdout] = process.stdout.force_encoding(Encoding.default_external).encode("utf-8")
-        reply[:stderr] = process.stderr
+        reply[:stdout] = process.stdout.encode("utf-8", bom_encoding(process.stdout))
+        reply[:stderr] = process.stderr.encode("utf-8", bom_encoding(process.stderr))
+
         reply[:exitcode] = process.exitcode
         process.cleanup_state
       end
 
       def start_command(request = {})
         job = Job.new
-        job.start_command(gen_command(request))
+        environment = get_environment(request)
+        job.start_command(environment, gen_command(request))
         reply[:handle] = job.handle
       end
 
@@ -103,34 +106,82 @@ module MCollective
         end
       end
 
-    def gen_env(request = {})
-      env = request[:env] || ''
+      def get_environment(request = {})
+        environment = request[:environment] || '{}'
 
-      value = ''
-      if env != ''
-        env = JSON.parse(env)
-        value = env.map{|k,v| "#{k}=\"#{v}\""}.join(';')
-        value += ";"
-      end
-      value
-     end
+        if windows?
+          export = 'set'
+          eol = '\r\n'
+        else
+          export = 'export'
+          eol = ';'
+        end
 
-    def gen_command(request = {})
-      if request[:type] == 'cmd'
-        cmd = request[:command]
-      else
-        cmd = gen_tmpfile(request) + ' ' + request[:params].to_s 
+        JSON.parse(environment).map{|k,v|
+          "#{export} #{k}=\'#{v}'"
+        }.join(eol) + " "
       end
-      
-      value = gen_env(request)
-      if !windows? and request[:user]
-          cmd = "su - #{request[:user]} -c '#{value}" + cmd + "'"
+
+      def gen_command(request = {})
+        if request[:type] == 'cmd'
+          cmd = request[:command]
+        else
+          cmd = gen_tmpfile(request) + ' ' + request[:params].to_s.force_encoding("utf-8").encode(Encoding.default_external)
+        end
+
+        cmd = " #{get_environment(request)} " + cmd
+
+        run_as = request[:user]
+        script_type = get_script_type(request)
+
+        if !windows?
+          if run_as
+            "su - #{run_as} -c '#{script_type} #{cmd}'"
+          else
+            cmd = "#{script_type} #{cmd}"
+          end
+        else
+          # 暂不支持windows下账户切换操作
+          cmd = script_type + " /C " + cmd
+        end
       end
-      cmd
-    end
+
+      def get_script_type(request = {})
+        if request[:scriptType].to_s == ''
+          windows? ? "cmd" : "sh"
+        else   
+          script_map = {
+            "Shell" => "sh",
+            "Python" => "python",
+            "Bat" => "cmd",
+          }
+          script_map[request[:scriptType]]
+        end
+      end
 
       def windows?
-        RUBY_PLATFORM.match(/cygwin|mswin|mingw|bccwin|wince|emx|win32|dos/)
+          RUBY_PLATFORM.match(/cygwin|mswin|mingw|bccwin|wince|emx|win32|dos/)
+      end
+
+      def bom_encoding(str)
+        return "UTF-8" if str.to_s == ''
+        if str.encoding.name == "ASCII-8BIT"
+          first = str[0].to_s.unpack('H*')
+          second = str[1].to_s.unpack('H*')
+          third = str[2].to_s.unpack('H*')
+          fourth = str[3].to_s.unpack('H*')
+          if [first, second, third].join == 'efbbbf'
+            'UTF-8'
+          elsif ['fffe', 'feff'].include? [first, second].join
+            'UTF-16'
+          elsif [first, second, third, fourth].join == '0000feff'
+            'UTF-32'
+          else
+            Encoding.default_external
+          end
+        else
+          str.encoding.name
+        end
       end
     end
   end

@@ -25,9 +25,17 @@ action "run", :description => "Run a command" do
             :maxlength   => 1024,
             :optional    => true
 
-    input   :env,
+    input   :environment,
             :prompt      => "Environment",
             :description => "Environment to run command as",
+            :type        => :string,
+            :validation  => '.*',
+            :maxlength   => 100*1024,
+            :optional    => true
+
+    input   :scriptType,
+            :prompt      => "ScriptType",
+            :description => "eg: Shell, Python, Bat",
             :type        => :string,
             :validation  => '.*',
             :maxlength   => 100*1024,
@@ -76,9 +84,17 @@ action "start", :description => "Spawn a command" do
             :maxlength   => 1024,
             :optional    => true
             
-    input   :env,
+    input   :environment,
             :prompt      => "Environment",
             :description => "Environment to run command as",
+            :type        => :string,
+            :validation  => '.*',
+            :maxlength   => 100*1024,
+            :optional    => true
+
+    input   :scriptType,
+            :prompt      => "ScriptType",
+            :description => "eg: Shell, Python, Bat",
             :type        => :string,
             :validation  => '.*',
             :maxlength   => 100*1024,

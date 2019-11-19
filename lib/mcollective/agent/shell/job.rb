@@ -57,7 +57,7 @@ module MCollective
           end
         end
 
-        def start_command(command)
+        def start_command(environment, command)
           @command = command
           # We create a manager process which then spawns the command we want
           # to run, the manager then writes a 'pid' file on succesful spawn, or
@@ -69,6 +69,10 @@ module MCollective
 
           File.open("#{state_directory}/wrapper", 'w') do |fh|
             fh.puts wrapper
+          end
+
+          File.open("#{state_directory}/environment", 'w') do |fh|
+            fh.puts environment
           end
 
           manager = ::Process.spawn(find_ruby, "#{state_directory}/wrapper", {
@@ -90,8 +94,9 @@ module MCollective
           ::Process.detach(manager)
 
           if File.exists?("#{state_directory}/pid")
-            pid = ""
+            pid = IO.read("#{state_directory}/pid")
             while pid == "" do
+              sleep 0.1
               pid = IO.read("#{state_directory}/pid")
             end
             @pid = Integer(pid)
@@ -200,9 +205,11 @@ module MCollective
 
         def wrapper
           return <<-WRAPPER
-            while !File.exists("#{state_directory}/command")
+            require 'json'
+            while !File.exists?("#{state_directory}/command")
               sleep 0.1
             end
+
             command = IO.read("#{state_directory}/command").chomp
 
             options = {
@@ -211,8 +218,18 @@ module MCollective
               :err => "#{state_directory}/stderr",
             }
 
+            file = File.read("#{state_directory}/environment")
+            file = file.strip()
+            if !file.empty?
+              environment = JSON.parse(file)
+            end
+
             begin
-              pid = ::Process.spawn(command, options)
+            if environment.nil?
+                pid = ::Process.spawn(command, options)
+            else
+                pid = ::Process.spawn(environment, command, options)
+            end
 
               File.open("#{state_directory}/pid", 'w') do |fh|
                 fh.puts pid

@@ -26,9 +26,14 @@ END_OF_USAGE
          :arguments => ['--user USER'],
          :description => 'runas user'
 
-  option :env,
-         :arguments => ['--env ENVIRONMENT'],
+  option :environment,
+         :arguments => ['--environment ENVIRONMENT'],
          :description => 'environment'
+
+  option :scriptType,
+         :arguments => ['--scriptType SCRIPTTYPE'],
+         :description => 'scriptType, eg: Shell, Python, Bat'
+
 
   def post_option_parser(configuration)
     if ARGV.size < 1
@@ -53,9 +58,11 @@ END_OF_USAGE
 
   def calc_args(command)
     user = configuration[:user] || 'root'
-    env = configuration[:env] || ''
+    environment = configuration[:environment] || '{}'
+    script_type = configuration[:scriptType]
+
     if configuration[:file].nil?
-      {:type => 'cmd', :user => user, :command => command, :env => env}
+      {:type => 'cmd', :user => user, :command => command, :environment => environment, :scriptType => script_type}
     else
       filepath, cmd_args = configuration[:file].split(" ", 2)
       cmd_args ||= ''
@@ -63,12 +70,13 @@ END_OF_USAGE
 
       {:type => 'script', :user => user, :command => "script:#{filepath}",
        :filename => filename, :content => Base64.encode64(File.readlines(filepath).join),
-       :base64 => true, :params => cmd_args + " " + command, :env => env}
+       :base64 => true, :params => cmd_args + " " + command, :environment => environment, :scriptType => script_type}
     end
   end
 
+
   def run_command
-    command = ARGV.join(' ')
+    command = calc_args(ARGV.join(' '))
 
     if configuration[:tail]
       tail(command)
@@ -78,10 +86,10 @@ END_OF_USAGE
   end
 
   def start_command
-    command = ARGV.join(' ')
+    command = calc_args(ARGV.join(' '))
     client = rpcclient('shell')
 
-    responses = client.start(calc_args(command))
+    responses = client.start(command)
     responses.sort_by! {|r| r[:sender]}
 
     responses.each do |response|
@@ -147,8 +155,9 @@ END_OF_USAGE
 
   def do_run(command)
     client = rpcclient('shell')
+    
+    responses = client.run(command)
 
-    responses = client.run(calc_args(command))
     responses.sort_by! {|r| r[:sender]}
 
     if client.options[:output_format] == :json
@@ -186,8 +195,7 @@ END_OF_USAGE
     client = rpcclient('shell')
 
     processes = []
-
-    client.start(calc_args(command)).each do |response|
+    client.start(command).each do |response|
       next unless response[:statuscode] == 0
       processes << Watcher.new(response[:sender], response[:data][:handle])
     end
@@ -230,10 +238,10 @@ END_OF_USAGE
         end
 
         client.status({
-                          :handle => process.handle,
-                          :stdout_offset => process.stdout_offset,
-                          :stderr_offset => process.stderr_offset,
-                      }).each do |response|
+          :handle => process.handle,
+          :stdout_offset => process.stdout_offset,
+          :stderr_offset => process.stderr_offset,
+        }).each do |response|
           if response[:statuscode] != 0
             process.flush
             processes.delete(process)
