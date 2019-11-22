@@ -53,8 +53,17 @@ module MCollective
           process.kill
         end
 
-        reply[:stdout] = process.stdout.encode("utf-8", bom_encoding(process.stdout))
-        reply[:stderr] = process.stderr.encode("utf-8", bom_encoding(process.stderr))
+        begin
+          reply[:stdout] = process.stdout.encode("utf-8", bom_encoding(process.stdout))
+        rescue
+          reply[:stdout] = process.stdout
+        end
+
+        begin
+          reply[:stderr] = process.stderr.encode("utf-8", bom_encoding(process.stderr))
+        rescue
+          reply[:stderr] = process.stderr
+        end
 
         reply[:exitcode] = process.exitcode
         process.cleanup_state
