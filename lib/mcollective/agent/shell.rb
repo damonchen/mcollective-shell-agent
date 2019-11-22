@@ -125,35 +125,39 @@ module MCollective
       def gen_command(request = {})
         if request[:type] == 'cmd'
           cmd = request[:command]
-        else
-          cmd = gen_tmpfile(request) + ' ' + request[:params].to_s.force_encoding("utf-8").encode(Encoding.default_external)
-        end
-
-        cmd = " #{get_environment(request)} " + cmd
-
-        run_as = request[:user]
-        script_type = get_script_type(request)
-
-        if !windows?
-          if run_as
-            "su - #{run_as} -c '#{script_type} #{cmd}'"
+          if windows?
+            # 暂不支持windows下账户切换操作
+            "cmd /C " + cmd
           else
-            cmd = "#{script_type} #{cmd}"
+            if request[:user]
+              "su - #{request[:user]} - c " + cmd
+            else
+              cmd
+            end
           end
         else
-          # 暂不支持windows下账户切换操作
-          cmd = script_type + " /C " + cmd
+          cmd = [gen_tmpfile(request),request[:params].to_s.force_encoding("utf-8").encode(Encoding.default_external)].join(" ")
+          if windows?
+            # 暂不支持windows下账户切换操作
+            [get_script_type(request), cmd].join(" ")
+          else
+            if request[:user]
+              ["su - #{request[:user]} - c", get_script_type(request), cmd].join(" ")
+            else
+              [get_script_type(request), cmd].join(" ")
+            end
+          end
         end
       end
 
       def get_script_type(request = {})
         if request[:scriptType].to_s == ''
-          windows? ? "cmd" : "sh"
-        else   
+          windows? ? "cmd /C" : "sh"
+        else
           script_map = {
             "Shell" => "sh",
             "Python" => "python",
-            "Bat" => "cmd",
+            "Bat" => "cmd /C",
           }
           script_map[request[:scriptType]]
         end
@@ -186,4 +190,3 @@ module MCollective
     end
   end
 end
-

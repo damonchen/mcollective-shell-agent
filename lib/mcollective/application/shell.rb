@@ -33,6 +33,7 @@ END_OF_USAGE
   option :scriptType,
          :arguments => ['--scriptType SCRIPTTYPE'],
          :description => 'scriptType, eg: Shell, Python, Bat'
+         :default => ""
 
 
   def post_option_parser(configuration)
