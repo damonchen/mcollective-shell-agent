@@ -32,7 +32,7 @@ END_OF_USAGE
 
   option :scriptType,
          :arguments => ['--scriptType SCRIPTTYPE'],
-         :description => 'scriptType, eg: Shell, Python, Bat'
+         :description => 'scriptType, eg: Shell, Python, Bat',
          :default => ""
 
 
