@@ -116,7 +116,7 @@ module MCollective
       end
 
       def get_environment(request = {})
-        environment = request[:environment] || '{}'
+        environment = request[:environment].to_s == '' ?  '{}' : request[:environment]
 
         if windows?
           export = 'set'
