@@ -1,4 +1,5 @@
 require 'mcollective/agent/shell/job'
+require 'shellwords'
 
 module MCollective
   module Agent
@@ -139,7 +140,7 @@ module MCollective
             "cmd /C " + cmd
           else
             if request[:user]
-              "su - #{request[:user]} -c " + cmd
+              "su - #{request[:user]} -c '" + Shellwords.escape(cmd) + "'"
             else
               cmd
             end
@@ -151,7 +152,7 @@ module MCollective
             [get_script_type(request), cmd].join(" ")
           else
             if request[:user]
-              ["su - #{request[:user]} -c", get_script_type(request), cmd].join(" ")
+              "su - #{request[:user]} -c '#{get_script_type(request)} #{Shellwords.escape(cmd)}'"
             else
               [get_script_type(request), cmd].join(" ")
             end
