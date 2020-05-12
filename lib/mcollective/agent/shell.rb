@@ -68,6 +68,7 @@ module MCollective
 
         reply[:exitcode] = process.exitcode
         process.cleanup_state
+        cleanup_tmpdirs if request[:type] != 'cmd'
       end
 
       def start_command(request = {})
@@ -92,8 +93,8 @@ module MCollective
       end
 
       def gen_tmpfile(request = {})
-        require 'tempfile'
-        tmpfile = Tempfile.new(request[:filename])
+        @tmpdir = Dir.mktmpdir()
+        tmpfile = File.new(@tmpdir + "/" + request[:filename], "w")
         if request[:base64]
           content = Base64.decode64(request[:content])
         else
@@ -101,19 +102,9 @@ module MCollective
         end
         content = content.encode('gbk') if windows?
         tmpfile.write(content)
-        tmpfile.chmod(0755)
+        tmpfile.chmod(0755) unless windows?
         tmpfile.close
-        if windows?
-          if request[:filename].match(/\./)
-            script_path = (tmpfile.path + '.' + request[:filename].split(/\./)[-1]).encode('gbk')
-            File.rename tmpfile.path, script_path
-          else
-            script_path = tmpfile.path
-          end
-          script_path
-        else
-          tmpfile.path
-        end
+        tmpfile.path
       end
 
       def get_environment(request = {})
@@ -197,6 +188,16 @@ module MCollective
           str.encoding.name
         end
       end
+      
+      def cleanup_tmpdirs
+        begin
+          FileUtils.rm_r(@tmpdir) if File.directory?(@tmpdir)
+        rescue => e
+          puts "Could not remove temporary build directory - '#{@tmpdir}'"
+          raise e
+        end
+      end
+      
     end
   end
 end
