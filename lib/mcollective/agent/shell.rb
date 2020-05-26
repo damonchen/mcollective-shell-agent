@@ -102,7 +102,10 @@ module MCollective
         end
         content = content.encode('gbk') if windows?
         tmpfile.write(content)
-        tmpfile.chmod(0755) unless windows?
+        unless windows?
+            File.chmod(0755, File.dirname(tmpfile))
+            tmpfile.chmod(0755)
+        end
         tmpfile.close
         tmpfile.path
       end
@@ -143,7 +146,7 @@ module MCollective
             [get_script_type(request), cmd].join(" ")
           else
             if request[:user] and request[:user] != ENV['USER']
-              "su - #{request[:user]} -c '#{get_script_type(request)} #{Shellwords.escape(cmd)}'"
+              "su - #{request[:user]} -c '#{get_script_type(request)} #{Shellwords.escape(cmd.strip)}'"
             else
               [get_script_type(request), cmd].join(" ")
             end
@@ -152,14 +155,14 @@ module MCollective
       end
 
       def get_script_type(request = {})
-        if request[:scriptType].to_s == ''
+        script_map = {
+          "Shell" => "sh",
+          "Python" => "python",
+          "Bat" => "cmd /C",
+        }
+        if script_map[request[:scriptType]].to_s == ''
           windows? ? "cmd /C" : "sh"
         else
-          script_map = {
-            "Shell" => "sh",
-            "Python" => "python",
-            "Bat" => "cmd /C",
-          }
           script_map[request[:scriptType]]
         end
       end
@@ -188,7 +191,7 @@ module MCollective
           str.encoding.name
         end
       end
-      
+
       def cleanup_tmpdirs
         begin
           FileUtils.rm_r(@tmpdir) if File.directory?(@tmpdir)
@@ -197,7 +200,7 @@ module MCollective
           raise e
         end
       end
-      
+
     end
   end
 end
