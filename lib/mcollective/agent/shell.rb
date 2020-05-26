@@ -130,7 +130,7 @@ module MCollective
             # 暂不支持windows下账户切换操作
             "cmd /C " + cmd
           else
-            if request[:user] and request[:user] == ENV['USER']
+            if request[:user] and request[:user] != ENV['USER']
               "su - #{request[:user]} -c '" + Shellwords.escape(cmd) + "'"
             else
               cmd
@@ -142,7 +142,7 @@ module MCollective
             # 暂不支持windows下账户切换操作
             [get_script_type(request), cmd].join(" ")
           else
-            if request[:user] and request[:user] == ENV['USER']
+            if request[:user] and request[:user] != ENV['USER']
               "su - #{request[:user]} -c '#{get_script_type(request)} #{Shellwords.escape(cmd)}'"
             else
               [get_script_type(request), cmd].join(" ")
