@@ -134,21 +134,23 @@ module MCollective
             "cmd /C " + cmd
           else
             if request[:user] and request[:user] != ENV['USER']
-              "su - #{request[:user]} -c '" + Shellwords.escape(cmd) + "'"
+              "su - #{request[:user]} -c '" + Shellwords.escape(cmd.strip) + "'"
             else
               cmd
             end
           end
         else
-          cmd = [gen_tmpfile(request),request[:params].to_s.force_encoding("utf-8").encode(Encoding.default_external)].join(" ")
+          #cmd = [gen_tmpfile(request),request[:params].to_s.force_encoding("utf-8").encode(Encoding.default_external)].join(" ")
+          cmd = gen_tmpfile(request)
+          params = request[:params].to_s.force_encoding("utf-8").encode(Encoding.default_external)
           if windows?
             # 暂不支持windows下账户切换操作
             [get_script_type(request), cmd].join(" ")
           else
             if request[:user] and request[:user] != ENV['USER']
-              "su - #{request[:user]} -c '#{get_script_type(request)} #{Shellwords.escape(cmd.strip)}'"
+              Shellwords.escape("su - #{request[:user]} -c '#{get_script_type(request)} #{cmd.strip} #{params.strip}'")
             else
-              [get_script_type(request), cmd].join(" ")
+              [get_script_type(request), cmd, params].join(" ")
             end
           end
         end
