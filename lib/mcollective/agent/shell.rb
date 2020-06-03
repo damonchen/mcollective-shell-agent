@@ -41,34 +41,40 @@ module MCollective
 
       def run_command(request = {})
         process = Job.new
-        environment = get_environment(request)
-        process.start_command(environment, gen_command(request))
-        timeout = request[:timeout] || 0
-        reply[:success] = true
-        begin
-          Timeout::timeout(timeout) do
-            process.wait_for_process
+        if(request[:user] and request[:user] != ENV['USER'] and request[:params] and not request[:params].match("'").nil?)
+          reply[:stdout] = ""
+          reply[:stderr] = "params[#{request[:params]}) cannot contains ['], please remove it and retry."
+          reply[:exitcode] = -1
+        else
+          environment = get_environment(request)
+          process.start_command(environment, gen_command(request))
+          timeout = request[:timeout] || 0
+          reply[:success] = true
+          begin
+            Timeout::timeout(timeout) do
+              process.wait_for_process
+            end
+          rescue Timeout::Error
+            reply[:success] = false
+            process.kill
           end
-        rescue Timeout::Error
-          reply[:success] = false
-          process.kill
-        end
 
-        begin
-          reply[:stdout] = process.stdout.encode("utf-8", bom_encoding(process.stdout))
-        rescue
-          reply[:stdout] = process.stdout
-        end
+          begin
+            reply[:stdout] = process.stdout.encode("utf-8", bom_encoding(process.stdout))
+          rescue
+            reply[:stdout] = process.stdout
+          end
 
-        begin
-          reply[:stderr] = process.stderr.encode("utf-8", bom_encoding(process.stderr))
-        rescue
-          reply[:stderr] = process.stderr
-        end
+          begin
+            reply[:stderr] = process.stderr.encode("utf-8", bom_encoding(process.stderr))
+          rescue
+            reply[:stderr] = process.stderr
+          end
 
-        reply[:exitcode] = process.exitcode
-        process.cleanup_state
-        cleanup_tmpdirs if request[:type] != 'cmd'
+          reply[:exitcode] = process.exitcode
+          process.cleanup_state
+          cleanup_tmpdirs if request[:type] != 'cmd'
+        end
       end
 
       def start_command(request = {})
@@ -134,7 +140,7 @@ module MCollective
             "cmd /C " + cmd
           else
             if request[:user] and request[:user] != ENV['USER']
-              "su - #{request[:user]} -c '" + Shellwords.escape(cmd.strip) + "'"
+              "su - #{request[:user]} -c '" + cmd.strip + "'"
             else
               cmd
             end
