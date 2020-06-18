@@ -181,7 +181,7 @@ module MCollective
 
       def bom_encoding(str)
         return "UTF-8" if str.to_s == ''
-        if str.encoding.name == "ASCII-8BIT"
+        if str.encoding.name == "ASCII-8BIT" and windows?
           first = str[0].to_s.unpack('H*')
           second = str[1].to_s.unpack('H*')
           third = str[2].to_s.unpack('H*')
