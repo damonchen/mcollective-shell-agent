@@ -106,7 +106,7 @@ module MCollective
         else
           content = request[:content]
         end
-        content = content.encode('gbk') if windows?
+        # content = content.encode('gbk') if windows?
         tmpfile.write(content)
         unless windows?
             File.chmod(0755, File.dirname(tmpfile))
