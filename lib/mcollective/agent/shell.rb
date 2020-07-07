@@ -137,7 +137,7 @@ module MCollective
           cmd = request[:command]
           if windows?
             # 暂不支持windows下账户切换操作
-            "cmd /C " + cmd
+            "cmd /C " + cmd.force_encoding("utf-8").encode(Encoding.default_external)
           else
             if request[:user] and request[:user] != ENV['USER']
               "su - #{request[:user]} -c '" + cmd.strip + "'"
